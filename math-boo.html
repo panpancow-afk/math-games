@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#142e27">
+<title>Math Boo</title>
+<style>
+*{box-sizing:border-box} :root{font-family:system-ui,sans-serif;color:#f5efda;background:#142e27;color-scheme:dark} body{margin:0;background:radial-gradient(ellipse at top,#274c39,transparent 75%);min-height:100dvh} main{width:min(100% - 24px,640px);margin:auto;padding:14px 0 18px} header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px} h1{font-size:clamp(20px,5vw,34px);margin:0;line-height:1.2;letter-spacing:.04em} header p{margin:4px 0 0;color:#b6ceb5;font-size:14px} button{border:0;border-radius:10px;background:#355c4a;color:inherit;font:inherit;font-weight:750;cursor:pointer;touch-action:none;min-height:40px} button:hover{filter:brightness(1.14)} button:active{translate:0 2px} button:focus-visible{outline:3px solid #fff;outline-offset:2px} button:disabled{opacity:.5;cursor:default} #reset{padding:0 12px;white-space:nowrap} .stats{display:flex;justify-content:space-around;gap:4px;padding:8px;background:#101f19;border:1px solid #527459;border-radius:12px 12px 0 0;font-size:14px} .stats b{color:#ffe193;margin-left:4px} #board{display:grid;grid-template-columns:repeat(11,1fr);aspect-ratio:11/7;background:#567c44;border:4px solid #101f19;position:relative;overflow:hidden;border-radius:0 0 12px 12px} .tile{display:grid;place-items:center;min-width:0;min-height:0;position:relative;font-size:clamp(16px,5.8vw,42px);line-height:1;isolation:isolate} .light{background:#61874a} .tile::before{content:'';position:absolute;inset:12%;opacity:.23;background:radial-gradient(circle at 16% 70%,#c9de88 0 1px,transparent 2px),radial-gradient(circle at 89% 20%,#192f20 0 1px,transparent 2px);z-index:-1} .house::before{background:#89958c;opacity:1;inset:10% 8%;border-radius:7px;box-shadow:0 4px #374b43} .bear{width:76%;height:82%;z-index:2;filter:drop-shadow(0 2px 1px #263b28)} .fire{background:#ff9b32!important;box-shadow:inset 0 0 0 3px #ffca58;color:#fff5a3} .fire::after{content:'✦';position:absolute;z-index:1} .bomb{font-size:.72em;z-index:2} .bomb small{position:absolute;right:3%;bottom:2%;padding:2px 3px;border-radius:4px;background:#372421;color:#ffe392;font-size:clamp(9px,2.5vw,14px);font-weight:800} .hint{margin:8px 0 6px;min-height:1.4em;color:#e8d9ab;font-size:14px;text-align:center} .controls{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 14px;background:#203f32;border:1px solid #486854;border-radius:14px} .pad{display:grid;grid-template-columns:repeat(3,clamp(34px,10vw,52px));gap:4px} .pad button{min-height:36px;font-size:21px;box-shadow:0 2px #142e27} #up{grid-column:2} #left{grid-column:1} .actions{display:grid;gap:6px;width:min(100%,225px)} .actions button{padding:0 6px;font-size:clamp(13px,3.4vw,16px)} .primary{background:#ffd16b;color:#2b2618} footer{text-align:center;color:#b4c8b5;font-size:13px;margin-top:8px} dialog{color:#f5efda;background:#243f32;border:1px solid #78906a;border-radius:18px;width:min(calc(100% - 30px),390px);padding:22px;text-align:center} dialog::backdrop{background:#081712be} dialog h2{margin:0 0 8px} dialog p{margin:8px 0;color:#d8e1ca} #equation{display:flex;justify-content:center;align-items:center;gap:12px;margin:18px 0;font-size:27px;font-weight:800} .fraction{display:inline-grid;vertical-align:middle;text-align:center;line-height:1.05;min-width:1.4em} .fraction span:first-child{padding-bottom:2px;border-bottom:2px solid}.fraction span:last-child{padding-top:2px} #choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px} #choices button{padding:8px 4px;min-height:58px;font-size:20px} #feedback{min-height:1.5em;color:#ffe098} .dialog-button{padding:0 16px} @media(max-height:690px) and (min-width:600px){main{max-width:510px}}
+.quiz-tile{display:grid;place-items:center;width:76%;height:76%;font-size:.64em;background:#74541e;border:2px solid #ffe68d;border-radius:25%;box-shadow:0 0 10px #ffdf6e;animation:glow 1.2s ease-in-out infinite alternate}@keyframes glow{to{box-shadow:0 0 3px #ffdf6e}}@media(prefers-reduced-motion:reduce){.quiz-tile{animation:none}} .control-note{font-size:13px;color:#d5e1c5;text-align:center}</style>
+</head>
+<body>
+<main>
+<header><div><h1>Math Boo</h1><p>答對同分母分數加法，守住森林村！</p></div><button id="reset">重新開始</button></header>
+<div class="stats"><span>❤️ 生命 <b id="health"></b></span><span>💣 炸彈 <b id="stock"></b></span><span>🕷️ 害蟲 <b id="remaining"></b></span></div>
+<div id="board" role="img" aria-label="森林村遊戲地圖"></div>
+<p id="hint" class="hint" role="status"></p>
+<section class="controls" aria-label="遊戲控制">
+<div class="pad" aria-label="方向鍵">
+<button id="up" aria-label="上">▲</button>
+<button id="left" aria-label="左">◀</button>
+<button id="down" aria-label="下">▼</button>
+<button id="right" aria-label="右">▶</button>
+</div>
+<div class="actions"><button id="plant" class="primary">💣 放炸彈</button><span class="control-note">走到 ❔ 答題拿炸彈</span></div>
+</section>
+<footer>鍵盤方向鍵移動 · 空白鍵放炸彈</footer>
+</main>
+<dialog id="question" aria-labelledby="quiz-title">
+<h2 id="quiz-title">算對就送你一顆炸彈！</h2><p>選出正確的分數。</p><div id="equation"></div><div id="choices"></div><p id="feedback" role="status"></p><button id="cancel" class="dialog-button">回遊戲</button>
+</dialog>
+<dialog id="result" aria-labelledby="outcome">
+<h2 id="outcome"></h2><p id="result-text"></p><button id="again" class="primary dialog-button">再玩一次</button>
+</dialog>
+<script>
+'use strict';
+
+const byId = id => document.getElementById(id);
+const width = 11;
+const height = 7;
+const directions = [[0,-1],[-1,0],[0,1],[1,0]];
+const key = (x,y) => y * width + x;
+const houses = new Set([1,3,5].flatMap(y => [2,4,6,8].map(x => key(x,y))));
+const board = byId('board');
+const question = byId('question');
+const result = byId('result');
+const tiles = Array.from({length: width * height}, (_, index) => {
+  const tile = document.createElement('div');
+  tile.className = 'tile' + ((Math.floor(index / width) + index % width) % 2 ? ' light' : '');
+  board.append(tile);
+  return tile;
+});
+const bear = '<svg class="bear" viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="35" rx="16" ry="11" fill="#252a2e"/><circle cx="12" cy="12" r="7" fill="#252a2e"/><circle cx="36" cy="12" r="7" fill="#252a2e"/><circle cx="12" cy="12" r="3.5" fill="#946b62"/><circle cx="36" cy="12" r="3.5" fill="#946b62"/><ellipse cx="24" cy="23" rx="17" ry="15" fill="#303438"/><path d="M16 36l8 5 8-5-3 7h-10z" fill="#fbefd0"/><ellipse cx="24" cy="27" rx="9" ry="6.5" fill="#c59876"/><circle cx="17" cy="21" r="1.7" fill="#fff3df"/><circle cx="31" cy="21" r="1.7" fill="#fff3df"/><ellipse cx="24" cy="25" rx="3" ry="2" fill="#202325"/><path d="M21 29q3 3 6 0" fill="none" stroke="#202325" stroke-width="1.3"/></svg>';
+const random = (min,max) => min + Math.floor(Math.random() * (max - min + 1));
+const valid = (x,y) => x >= 0 && x < width && y >= 0 && y < height && !houses.has(key(x,y));
+const fraction = (n,d) => '<span class="fraction"><span>' + n + '</span><span>' + d + '</span></span>';
+let player, pests, bombs, flames, health, stock, status, clock, nextPest, invulnerable, ended, quizTile, started;
+let previousFrame = performance.now();
+
+function placeQuiz(first) {
+  const current = key(player.x,player.y);
+  const candidates = tiles.map((_,index) => index).filter(index =>
+    index !== current && !houses.has(index) && !bombs.has(index) && !flames.has(index) &&
+    !pests.some(pest => key(pest.x,pest.y) === index) &&
+    (!first || Math.floor(index / width) + index % width <= 4));
+  quizTile = candidates[random(0,candidates.length - 1)];
+}
+
+function render() {
+  const actors = new Map(pests.map(pest => [key(pest.x,pest.y), pest.icon]));
+  actors.set(key(player.x,player.y), bear);
+  for (const [index,tile] of tiles.entries()) {
+    const bomb = bombs.get(index);
+    tile.classList.toggle('fire', flames.has(index));
+    tile.classList.toggle('house', houses.has(index));
+    const countdown = bomb ? '<span class="bomb">💣<small>' + Math.ceil((bomb.at - clock) / 1000) + '</small></span>' : '';
+    const markup = (houses.has(index) ? '🏠' : actors.get(index) || (index === quizTile ? '<span class="quiz-tile" title="答題拿炸彈">❔</span>' : '')) + countdown;
+    if (tile.innerHTML !== markup && tile.cachedMarkup !== markup) {
+      tile.innerHTML = markup;
+      tile.cachedMarkup = markup;
+    }
+  }
+  byId('health').textContent = health;
+  byId('stock').textContent = stock;
+  byId('remaining').textContent = pests.length;
+  byId('hint').textContent = status;
+  byId('plant').disabled = ended || stock === 0 || bombs.has(key(player.x,player.y));
+}
+
+function reset() {
+  if (result.open) result.close();
+  if (question.open) question.close();
+  player = {x:0,y:0};
+  pests = [[6,0,'🦟'],[10,0,'🕷️'],[7,4,'🪰'],[10,5,'🦟'],[3,6,'🕷️']]
+    .map(([x,y,icon]) => ({x,y,icon}));
+  bombs = new Map();
+  flames = new Map();
+  health = 3;
+  stock = 0;
+  clock = 0;
+  nextPest = 650;
+  invulnerable = 0;
+  ended = false;
+  started = false;
+  placeQuiz(true);
+  status = '走到閃亮的 ❔ 答題拿炸彈。石屋能擋住爆炸。';
+  render();
+}
+
+function finish(won) {
+  ended = true;
+  if (question.open) question.close();
+  byId('outcome').textContent = won ? '森林村得救了！' : '黑熊需要休息一下';
+  byId('result-text').textContent = won ? '你用分數加法取得炸彈，擊退了所有害蟲。' : '再試一次，記得在引爆前離開十字路線，或躲到石屋後方。';
+  result.showModal();
+}
+
+function resolveHits() {
+  const before = pests.length;
+  pests = pests.filter(pest => !flames.has(key(pest.x,pest.y)));
+  if (pests.length < before) status = '擊退了 ' + (before - pests.length) + ' 隻害蟲！';
+  const inBlast = flames.has(key(player.x,player.y));
+  const touchingPest = pests.some(pest => pest.x === player.x && pest.y === player.y);
+  if ((inBlast || touchingPest) && clock >= invulnerable) {
+    health--;
+    invulnerable = clock + 1200;
+    status = inBlast ? '黑熊被爆炸波及了！' : '黑熊碰到害蟲了！';
+  }
+  if (health === 0) finish(false);
+  else if (pests.length === 0) finish(true);
+}
+
+function move(dx,dy) {
+  if (ended || question.open) return;
+  const x = player.x + dx;
+  const y = player.y + dy;
+  if (!valid(x,y) || bombs.has(key(x,y))) return;
+  player = {x,y};
+  resolveHits();
+  render();
+  if (key(x,y) === quizTile) openQuiz();
+}
+
+function plant() {
+  const index = key(player.x,player.y);
+  if (ended || question.open || stock === 0 || bombs.has(index)) return;
+  stock--;
+  bombs.set(index,{x:player.x,y:player.y,at:clock + 2000});
+  status = '2 秒後引爆！快轉彎或躲到石屋後方。';
+  render();
+}
+
+function explode(index) {
+  const bomb = bombs.get(index);
+  if (!bomb) return;
+  bombs.delete(index);
+  const mark = (x,y) => flames.set(key(x,y),clock + 430);
+  mark(bomb.x,bomb.y);
+  for (const [dx,dy] of directions) {
+    for (let x = bomb.x + dx, y = bomb.y + dy; valid(x,y); x += dx, y += dy) {
+      mark(x,y);
+    }
+  }
+}
+
+function movePests() {
+  for (const pest of pests) {
+    const options = directions.map(([dx,dy]) => ({x:pest.x + dx,y:pest.y + dy}))
+      .filter(({x,y}) => valid(x,y) && !bombs.has(key(x,y)) &&
+        !pests.some(other => other.x === x && other.y === y));
+    if (!options.length) continue;
+    if (Math.random() < .45) {
+      const distance = ({x,y}) => Math.abs(x - player.x) + Math.abs(y - player.y);
+      options.sort((a,b) => distance(a) - distance(b));
+      Object.assign(pest,options[0]);
+    } else {
+      Object.assign(pest,options[random(0,options.length - 1)]);
+    }
+  }
+}
+
+function frame(now) {
+  const elapsed = now - previousFrame;
+  previousFrame = now;
+  // Keep the fuse running during a quiz so each planted bomb keeps its two-second timer.
+  if (!ended) {
+    clock += elapsed;
+    for (const [index,until] of flames) if (until <= clock) flames.delete(index);
+    for (const [index,bomb] of bombs) if (bomb.at <= clock) explode(index);
+    if (clock >= nextPest) {
+      nextPest = clock + 650;
+      if (started && !question.open) movePests();
+    }
+    resolveHits();
+    render();
+  }
+  requestAnimationFrame(frame);
+}
+
+function openQuiz() {
+  if (ended || question.open || key(player.x,player.y) !== quizTile) return;
+  if (bombs.size || flames.size) {
+    status = '等爆炸結束後再答題，先讓黑熊躲好！';
+    render();
+    return;
+  }
+  const d = random(3,12);
+  const a = random(1,d - 2);
+  const b = random(1,d - a - 1);
+  const sum = a + b;
+  const options = [[sum,d],[sum,d * 2],[sum - 1,d]];
+  byId('equation').innerHTML = fraction(a,d) + ' + ' + fraction(b,d) + ' = ?';
+  byId('feedback').textContent = '';
+  const choices = byId('choices');
+  choices.replaceChildren();
+  while (options.length) {
+    const [[n,den]] = options.splice(random(0,options.length - 1),1);
+    const button = document.createElement('button');
+    button.innerHTML = fraction(n,den);
+    button.setAttribute('aria-label',den + ' 分之 ' + n);
+    button.onclick = () => {
+      if (n !== sum || den !== d) {
+        byId('feedback').textContent = '再試一次！分母保留 ' + d + '，把分子相加。';
+        return;
+      }
+      stock++;
+      started = true;
+      nextPest = clock + 650;
+      placeQuiz(false);
+      status = '答對了！' + a + ' + ' + b + ' = ' + sum + '，獲得 1 顆炸彈。';
+      question.close();
+      render();
+    };
+    choices.append(button);
+  }
+  question.showModal();
+}
+
+for (const [index,id] of ['up','left','down','right'].entries()) {
+  const button = byId(id);
+  let timer;
+  const stop = () => clearInterval(timer);
+  button.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    button.setPointerCapture(event.pointerId);
+    move(...directions[index]);
+    stop();
+    timer = setInterval(() => move(...directions[index]),145);
+  });
+  for (const type of ['pointerup','pointercancel','lostpointercapture']) button.addEventListener(type,stop);
+  button.addEventListener('click',event => {if (!event.detail) move(...directions[index]);});
+}
+
+document.addEventListener('keydown',event => {
+  if (question.open || ended || event.ctrlKey || event.metaKey || event.altKey) return;
+  const index = ['ArrowUp','ArrowLeft','ArrowDown','ArrowRight'].indexOf(event.key);
+  if (index !== -1) {
+    event.preventDefault();
+    move(...directions[index]);
+  } else if (event.code === 'Space' && !(event.target instanceof HTMLButtonElement)) {
+    event.preventDefault();
+    if (!event.repeat) plant();
+  }
+});
+byId('plant').onclick = plant;
+byId('cancel').onclick = () => question.close();
+byId('reset').onclick = reset;
+byId('again').onclick = reset;
+result.addEventListener('cancel',event => event.preventDefault());
+reset();
+requestAnimationFrame(frame);
+
+</script>
+</body>
+</html>
