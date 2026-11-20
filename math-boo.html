@@ -2,27 +2,56 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#142e27">
 <title>Math Boo</title>
 <style>
 *{box-sizing:border-box} :root{font-family:system-ui,sans-serif;color:#f5efda;background:#142e27;color-scheme:dark} body{margin:0;background:radial-gradient(ellipse at top,#274c39,transparent 75%);min-height:100dvh} main{width:min(100% - 24px,640px);margin:auto;padding:14px 0 18px} header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px} h1{font-size:clamp(20px,5vw,34px);margin:0;line-height:1.2;letter-spacing:.04em} header p{margin:4px 0 0;color:#b6ceb5;font-size:14px} button{border:0;border-radius:10px;background:#355c4a;color:inherit;font:inherit;font-weight:750;cursor:pointer;touch-action:none;min-height:40px} button:hover{filter:brightness(1.14)} button:active{translate:0 2px} button:focus-visible{outline:3px solid #fff;outline-offset:2px} button:disabled{opacity:.5;cursor:default} #reset{padding:0 12px;white-space:nowrap} .stats{display:flex;justify-content:space-around;gap:4px;padding:8px;background:#101f19;border:1px solid #527459;border-radius:12px 12px 0 0;font-size:14px} .stats b{color:#ffe193;margin-left:4px} #board{display:grid;grid-template-columns:repeat(11,1fr);aspect-ratio:11/7;background:#567c44;border:4px solid #101f19;position:relative;overflow:hidden;border-radius:0 0 12px 12px} .tile{display:grid;place-items:center;min-width:0;min-height:0;position:relative;font-size:clamp(16px,5.8vw,42px);line-height:1;isolation:isolate} .light{background:#61874a} .tile::before{content:'';position:absolute;inset:12%;opacity:.23;background:radial-gradient(circle at 16% 70%,#c9de88 0 1px,transparent 2px),radial-gradient(circle at 89% 20%,#192f20 0 1px,transparent 2px);z-index:-1} .house::before{background:#89958c;opacity:1;inset:10% 8%;border-radius:7px;box-shadow:0 4px #374b43} .bear{width:76%;height:82%;z-index:2;filter:drop-shadow(0 2px 1px #263b28)} .fire{background:#ff9b32!important;box-shadow:inset 0 0 0 3px #ffca58;color:#fff5a3} .fire::after{content:'✦';position:absolute;z-index:1} .bomb{font-size:.72em;z-index:2} .bomb small{position:absolute;right:3%;bottom:2%;padding:2px 3px;border-radius:4px;background:#372421;color:#ffe392;font-size:clamp(9px,2.5vw,14px);font-weight:800} .hint{margin:8px 0 6px;min-height:1.4em;color:#e8d9ab;font-size:14px;text-align:center} .controls{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 14px;background:#203f32;border:1px solid #486854;border-radius:14px} .pad{display:grid;grid-template-columns:repeat(3,clamp(34px,10vw,52px));gap:4px} .pad button{min-height:36px;font-size:21px;box-shadow:0 2px #142e27} #up{grid-column:2} #left{grid-column:1} .actions{display:grid;gap:6px;width:min(100%,225px)} .actions button{padding:0 6px;font-size:clamp(13px,3.4vw,16px)} .primary{background:#ffd16b;color:#2b2618} footer{text-align:center;color:#b4c8b5;font-size:13px;margin-top:8px} dialog{color:#f5efda;background:#243f32;border:1px solid #78906a;border-radius:18px;width:min(calc(100% - 30px),390px);padding:22px;text-align:center} dialog::backdrop{background:#081712be} dialog h2{margin:0 0 8px} dialog p{margin:8px 0;color:#d8e1ca} #equation{display:flex;justify-content:center;align-items:center;gap:12px;margin:18px 0;font-size:27px;font-weight:800} .fraction{display:inline-grid;vertical-align:middle;text-align:center;line-height:1.05;min-width:1.4em} .fraction span:first-child{padding-bottom:2px;border-bottom:2px solid}.fraction span:last-child{padding-top:2px} #choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px} #choices button{padding:8px 4px;min-height:58px;font-size:20px} #feedback{min-height:1.5em;color:#ffe098} .dialog-button{padding:0 16px} @media(max-height:690px) and (min-width:600px){main{max-width:510px}}
-.quiz-tile{display:grid;place-items:center;width:76%;height:76%;font-size:.64em;background:#74541e;border:2px solid #ffe68d;border-radius:25%;box-shadow:0 0 10px #ffdf6e;animation:glow 1.2s ease-in-out infinite alternate}@keyframes glow{to{box-shadow:0 0 3px #ffdf6e}}@media(prefers-reduced-motion:reduce){.quiz-tile{animation:none}} .control-note{font-size:13px;color:#d5e1c5;text-align:center}</style>
+.quiz-tile{display:grid;place-items:center;width:76%;height:76%;font-size:.64em;background:#74541e;border:2px solid #ffe68d;border-radius:25%;box-shadow:0 0 10px #ffdf6e;animation:glow 1.2s ease-in-out infinite alternate}@keyframes glow{to{box-shadow:0 0 3px #ffdf6e}}@media(prefers-reduced-motion:reduce){.quiz-tile{animation:none}} .control-note{font-size:13px;color:#d5e1c5;text-align:center}
+.stats span { white-space: nowrap; }
+.stats b { font-variant-numeric: tabular-nums; }
+.difficulty { margin: 7px 0 0; color: #c4d9c1; text-align: center; font-size: 14px; }
+.pad { grid-template-areas: ". up ." "left down right"; gap: 6px; touch-action: none; user-select: none; -webkit-user-select: none; }
+#up { grid-area: up; }
+#left { grid-area: left; }
+#down { grid-area: down; }
+#right { grid-area: right; }
+.pad button { min-height: 46px; }
+.pad button.held { background: #5e865f; box-shadow: none; translate: 0 2px; }
+#plant { min-height: 56px; }
+#equation { flex-wrap: wrap; gap: 10px; font-size: clamp(20px, 6vw, 27px); }
+.equation-term { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+dialog { max-height: calc(100dvh - 28px); overflow: auto; }
+@media (pointer: coarse), (max-width: 520px) {
+  main { width: min(calc(100% - 16px), 640px); padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+  header { margin-bottom: 8px; }
+  .stats { font-size: clamp(12px, 3.7vw, 15px); padding: 8px 3px; }
+  .stats b { margin-left: 2px; }
+  .controls { padding: 10px 9px; gap: 8px; }
+  .pad { grid-template-columns: repeat(3, clamp(44px, 15vw, 70px)); }
+  .pad button { min-height: clamp(48px, 14vw, 66px); font-size: 25px; }
+  .actions { width: clamp(105px, 33vw, 175px); }
+  #plant { min-height: clamp(68px, 19vw, 90px); font-size: clamp(15px, 4.4vw, 21px); }
+  .control-note { font-size: 12px; }
+}
+@media (pointer: coarse) { footer { display: none; } }
+</style>
 </head>
 <body>
 <main>
 <header><div><h1>Math Boo</h1><p>答對同分母分數加法，守住森林村！</p></div><button id="reset">重新開始</button></header>
-<div class="stats"><span>❤️ 生命 <b id="health"></b></span><span>💣 炸彈 <b id="stock"></b></span><span>🕷️ 害蟲 <b id="remaining"></b></span></div>
+<div class="stats"><span>❤️ 生命 <b id="health"></b></span><span>💣 炸彈 <b id="stock"></b></span><span>🕷️ 害蟲 <b id="remaining"></b></span><span>⏱️ <b id="survival">0:00</b></span></div>
 <div id="board" role="img" aria-label="森林村遊戲地圖"></div>
+<p id="difficulty" class="difficulty"></p>
 <p id="hint" class="hint" role="status"></p>
 <section class="controls" aria-label="遊戲控制">
-<div class="pad" aria-label="方向鍵">
+<div class="pad" id="direction-pad" role="group" aria-label="方向鍵">
 <button id="up" aria-label="上">▲</button>
 <button id="left" aria-label="左">◀</button>
 <button id="down" aria-label="下">▼</button>
 <button id="right" aria-label="右">▶</button>
 </div>
-<div class="actions"><button id="plant" class="primary">💣 放炸彈</button><span class="control-note">走到 ❔ 答題拿炸彈</span></div>
+<div class="actions"><button id="plant" class="primary">💣 放炸彈</button><span class="control-note">方向鍵可按住移動</span></div>
 </section>
 <footer>鍵盤方向鍵移動 · 空白鍵放炸彈</footer>
 </main>
@@ -36,6 +65,7 @@
 'use strict';
 
 const byId = id => document.getElementById(id);
+const difficultyStep = 45_000;
 const width = 11;
 const height = 7;
 const directions = [[0,-1],[-1,0],[0,1],[1,0]];
@@ -54,8 +84,15 @@ const bear = '<svg class="bear" viewBox="0 0 48 48" aria-hidden="true"><ellipse 
 const random = (min,max) => min + Math.floor(Math.random() * (max - min + 1));
 const valid = (x,y) => x >= 0 && x < width && y >= 0 && y < height && !houses.has(key(x,y));
 const fraction = (n,d) => '<span class="fraction"><span>' + n + '</span><span>' + d + '</span></span>';
-let player, pests, bombs, flames, health, stock, status, clock, nextPest, invulnerable, ended, quizTile, started;
+let player, pests, bombs, flames, health, stock, status, clock, nextPest, invulnerable, ended, quizTile, started, moving;
 let previousFrame = performance.now();
+const termCount = () => 2 + Math.floor(clock / difficultyStep);
+
+function updateText(id, value) {
+  const element = byId(id);
+  const message = String(value);
+  if (element.textContent !== message) element.textContent = message;
+}
 
 function placeQuiz(first) {
   const current = key(player.x,player.y);
@@ -80,10 +117,13 @@ function render() {
       tile.cachedMarkup = markup;
     }
   }
-  byId('health').textContent = health;
-  byId('stock').textContent = stock;
-  byId('remaining').textContent = pests.length;
-  byId('hint').textContent = status;
+  const seconds = Math.floor(clock / 1000);
+  updateText('health', health);
+  updateText('stock', stock);
+  updateText('remaining', pests.length);
+  updateText('survival', Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2,'0'));
+  updateText('difficulty', '下一題：' + termCount() + ' 個同分母分數相加');
+  updateText('hint', status);
   byId('plant').disabled = ended || stock === 0 || bombs.has(key(player.x,player.y));
 }
 
@@ -102,6 +142,8 @@ function reset() {
   invulnerable = 0;
   ended = false;
   started = false;
+  moving = false;
+  stopDirection();
   placeQuiz(true);
   status = '走到閃亮的 ❔ 答題拿炸彈。石屋能擋住爆炸。';
   render();
@@ -109,6 +151,7 @@ function reset() {
 
 function finish(won) {
   ended = true;
+  stopDirection();
   if (question.open) question.close();
   byId('outcome').textContent = won ? '森林村得救了！' : '黑熊需要休息一下';
   byId('result-text').textContent = won ? '你用分數加法取得炸彈，擊退了所有害蟲。' : '再試一次，記得在引爆前離開十字路線，或躲到石屋後方。';
@@ -135,6 +178,8 @@ function move(dx,dy) {
   const x = player.x + dx;
   const y = player.y + dy;
   if (!valid(x,y) || bombs.has(key(x,y))) return;
+  if (!moving) previousFrame = performance.now();
+  moving = true;
   player = {x,y};
   resolveHits();
   render();
@@ -182,14 +227,14 @@ function movePests() {
 function frame(now) {
   const elapsed = now - previousFrame;
   previousFrame = now;
-  // Keep the fuse running during a quiz so each planted bomb keeps its two-second timer.
-  if (!ended) {
+  // Quizzes only open when the board has no active bombs or flames.
+  if (!ended && moving && !question.open && !document.hidden) {
     clock += elapsed;
     for (const [index,until] of flames) if (until <= clock) flames.delete(index);
     for (const [index,bomb] of bombs) if (bomb.at <= clock) explode(index);
     if (clock >= nextPest) {
       nextPest = clock + 650;
-      if (started && !question.open) movePests();
+      if (started) movePests();
     }
     resolveHits();
     render();
@@ -204,12 +249,20 @@ function openQuiz() {
     render();
     return;
   }
-  const d = random(3,12);
-  const a = random(1,d - 2);
-  const b = random(1,d - a - 1);
-  const sum = a + b;
+  const count = termCount();
+  const d = random(count + 1, Math.max(12, count * 3));
+  let budget = d - 1;
+  const numerators = Array.from({length: count}, (_, index) => {
+    const remaining = count - index - 1;
+    const numerator = random(1, Math.min(5, budget - remaining));
+    budget -= numerator;
+    return numerator;
+  });
+  const sum = numerators.reduce((total, value) => total + value, 0);
   const options = [[sum,d],[sum,d * 2],[sum - 1,d]];
-  byId('equation').innerHTML = fraction(a,d) + ' + ' + fraction(b,d) + ' = ?';
+  byId('equation').innerHTML = numerators.map((n,index) =>
+    '<span class="equation-term">' + (index ? '<span>+</span>' : '') + fraction(n,d) + '</span>'
+  ).join('') + '<span class="equation-term">= ?</span>';
   byId('feedback').textContent = '';
   const choices = byId('choices');
   choices.replaceChildren();
@@ -227,30 +280,68 @@ function openQuiz() {
       started = true;
       nextPest = clock + 650;
       placeQuiz(false);
-      status = '答對了！' + a + ' + ' + b + ' = ' + sum + '，獲得 1 顆炸彈。';
+      status = '答對了！分子相加等於 ' + sum + '，獲得 1 顆炸彈。';
       question.close();
       render();
     };
     choices.append(button);
   }
+  stopDirection();
   question.showModal();
 }
 
-for (const [index,id] of ['up','left','down','right'].entries()) {
-  const button = byId(id);
-  let timer;
-  const stop = () => clearInterval(timer);
-  button.addEventListener('pointerdown', event => {
-    if (event.button !== 0) return;
-    event.preventDefault();
-    button.setPointerCapture(event.pointerId);
-    move(...directions[index]);
-    stop();
-    timer = setInterval(() => move(...directions[index]),145);
-  });
-  for (const type of ['pointerup','pointercancel','lostpointercapture']) button.addEventListener(type,stop);
-  button.addEventListener('click',event => {if (!event.detail) move(...directions[index]);});
+const pad = byId('direction-pad');
+const directionButtons = ['up','left','down','right'].map(byId);
+let activePointer = null;
+let heldButton = null;
+let repeatDirection;
+
+function setDirection(button) {
+  if (heldButton === button) return;
+  clearInterval(repeatDirection);
+  heldButton?.classList.remove('held');
+  heldButton = button;
+  if (!button) return;
+  const direction = directions[directionButtons.indexOf(button)];
+  button.classList.add('held');
+  move(...direction);
+  if (heldButton === button) repeatDirection = setInterval(() => move(...direction), 145);
 }
+
+function stopDirection() {
+  activePointer = null;
+  setDirection(null);
+}
+
+pad.addEventListener('pointerdown', event => {
+  if (event.button !== 0 || activePointer !== null || ended || question.open) return;
+  const button = event.target.closest('button');
+  if (!directionButtons.includes(button)) return;
+  event.preventDefault();
+  activePointer = event.pointerId;
+  pad.setPointerCapture(event.pointerId);
+  setDirection(button);
+});
+pad.addEventListener('pointermove', event => {
+  if (event.pointerId !== activePointer) return;
+  const button = document.elementFromPoint(event.clientX,event.clientY)?.closest('button');
+  setDirection(directionButtons.includes(button) ? button : null);
+});
+for (const type of ['pointerup','pointercancel','lostpointercapture']) {
+  pad.addEventListener(type, event => {
+    if (event.pointerId === activePointer) stopDirection();
+  });
+}
+for (const [index,button] of directionButtons.entries()) {
+  button.addEventListener('click', event => {
+    if (!event.detail) move(...directions[index]);
+  });
+}
+document.addEventListener('visibilitychange', () => {
+  previousFrame = performance.now();
+  stopDirection();
+});
+question.addEventListener('close', () => { previousFrame = performance.now(); });
 
 document.addEventListener('keydown',event => {
   if (question.open || ended || event.ctrlKey || event.metaKey || event.altKey) return;
