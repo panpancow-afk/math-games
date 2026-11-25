@@ -349,7 +349,7 @@ document.addEventListener('keydown',event => {
   if (index !== -1) {
     event.preventDefault();
     move(...directions[index]);
-  } else if (event.code === 'Space' && !(event.target instanceof HTMLButtonElement)) {
+  } else if (event.code === 'Space' || event.key === ' ') {
     event.preventDefault();
     if (!event.repeat) plant();
   }
