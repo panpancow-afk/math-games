@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>math Blocks</title>
+<meta name="description" content="在 12 欄 × 18 列的棋盤上旋轉七種四格方塊，填滿整列得分。">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#102c2c;color:#fff6dd;font-family:system-ui,sans-serif}
+main{height:100vh;height:100dvh;display:grid;place-items:center;overflow:hidden}
+.well{position:relative;width:min(100vw,66.6667vh);width:min(100vw,66.6667dvh);aspect-ratio:2/3}
+canvas{display:block;width:100%;height:100%;touch-action:none;user-select:none;-webkit-touch-callout:none}
+.overlay{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;text-align:center;gap:15px;background:#091e1de8;padding:20px}
+.overlay[hidden]{display:none}.overlay strong{font-size:clamp(22px,5vw,38px)}.overlay p{margin:0;line-height:1.6}
+button{font:700 16px system-ui;border:1px solid #ffffff40;border-radius:8px;padding:10px 14px;background:#245747;color:#fff6dd;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:3px solid #659382;outline-offset:3px}.accent{background:#ffc477;color:#243e34;border:0}
+dialog{width:min(440px,calc(100% - 24px));border:0;border-radius:14px;background:#f9efd6;color:#203f37;padding:22px}
+dialog::backdrop{background:#071c1bbb}dialog h2{margin:0;font-size:20px}
+dialog input{width:100%;padding:9px;font:inherit;margin:8px 0 0}#feedback{min-height:1.5em;margin:6px 0;color:#9d2821}
+#problem{font-size:clamp(22px,6vw,30px);font-weight:800;margin:12px 0;font-variant-numeric:tabular-nums}
+#question,#hint{line-height:1.55}.actions{display:flex;flex-wrap:wrap;gap:8px}
+</style>
+<main>
+<section class="well" aria-label="遊戲區">
+<canvas id="board" width="360" height="540" tabindex="0" aria-label="12 欄、18 列棋盤。雙點旋轉，左右傾斜移動，長按求救。也可使用方向鍵，按 H 求救。"></canvas>
+<div class="overlay" id="overlay"><strong id="status" role="status">math Blocks</strong><p id="guide">雙點旋轉 · 左右傾斜移動<br>也可左右滑動 · 長按求救</p><button class="accent" id="play">開始遊戲</button></div>
+</section>
+</main>
+<dialog id="quiz" aria-labelledby="quiz-title"><form id="quiz-form">
+<h2 id="quiz-title">求救挑戰</h2>
+<p>答對即可讓下一塊變成四格直線。</p>
+<p id="problem"></p>
+<label id="question" for="answer"></label>
+<p id="hint"></p>
+<input id="answer" type="text" inputmode="numeric" autocomplete="off" aria-describedby="hint" required>
+<p id="feedback" role="status"></p>
+<div class="actions"><button class="accent" type="submit">送出答案</button><button type="button" id="cancel-quiz">取消</button></div>
+</form></dialog>
+<script>
+"use strict";
+const WIDTH = 12, HEIGHT = 18, TILE = 30;
+const shapes = {
+  I: ["....","IIII","....","...."], O: ["OO","OO"],
+  T: [".T.","TTT","..."], S: [".SS","SS.","..."],
+  Z: ["ZZ.",".ZZ","..."],
+  J: ["J..","JJJ","..."], L: ["..L","LLL","..."]
+};
+const colors = {I:"#64dbd7",O:"#f8cf65",T:"#bf9cec",S:"#a5da77",Z:"#fa827d",J:"#82a8f8",L:"#ffae67"};
+const get = id => document.getElementById(id);
+const surface = get("board");
+const ctx = surface.getContext("2d");
+const row = () => Array(WIDTH).fill(null);
+let board = Array.from({length:HEIGHT}, row);
+let active, upcoming, bag, score, lines, level, elapsed, previous;
+let mode = "ready";
+let rescueQueued = false, quizAnswer;
+const quiz = get("quiz");
+
+function drawType() {
+  if (!bag.length) {
+    bag = ["O","T","S","Z","J","L"];
+    for (let i = bag.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [bag[i], bag[j]] = [bag[j], bag[i]];
+    }
+  }
+  return bag.pop();
+}
+function cells(matrix) {
+  return matrix.flatMap((cellsInRow,y) => Array.from(cellsInRow,(type,x) => ({type,x,y})).filter(cell => cell.type !== "."));
+}
+function fits(matrix, left, top) {
+  return cells(matrix).every(({x,y}) => {
+    const col = left + x, line = top + y;
+    return col >= 0 && col < WIDTH && line < HEIGHT && (line < 0 || !board[line][col]);
+  });
+}
+function spawn() {
+  const matrix = shapes[rescueQueued ? "I" : upcoming];
+  active = {matrix,x:Math.floor((WIDTH - matrix.length)/2),y:0};
+  if (rescueQueued) rescueQueued = false;
+  else upcoming = drawType();
+  if (!fits(matrix,active.x,active.y)) {
+    active = null;
+    setMode("over");
+  }
+}
+function setMode(nextMode) {
+  mode = nextMode;
+  get("overlay").hidden = mode === "playing";
+  get("status").textContent = {ready:"math Blocks",paused:"已暫停",over:"遊戲結束",playing:"遊戲進行中"}[mode];
+  get("play").textContent = {ready:"開始遊戲",paused:"繼續遊戲",over:"再玩一次",playing:"繼續遊戲"}[mode];
+  get("guide").hidden = mode !== "ready";
+  if (mode === "over") {
+    get("guide").textContent = "消除 " + lines + " 列";
+    get("guide").hidden = false;
+  }
+}
+function start() {
+  board = Array.from({length:HEIGHT}, row);
+  bag = [];
+  rescueQueued = false;
+  score = lines = elapsed = 0;
+  level = 1;
+  upcoming = drawType();
+  setMode("playing");
+  spawn();
+  render();
+}
+function move(dx,dy) {
+  if (!fits(active.matrix,active.x+dx,active.y+dy)) return false;
+  active.x += dx;
+  active.y += dy;
+  return true;
+}
+function rotate(direction) {
+  const {matrix,x,y} = active;
+  const last = matrix.length - 1;
+  const turned = matrix.map((_,r) => matrix.map((__,c) =>
+    direction === 1 ? matrix[last-c][r] : matrix[c][last-r]).join(""));
+  for (const [dx,dy] of [[0,0],[-1,0],[1,0],[-2,0],[2,0],[0,-1],[0,-2],[-1,-1],[1,-1]]) {
+    if (fits(turned,x+dx,y+dy)) {
+      active = {matrix:turned,x:x+dx,y:y+dy};
+      return;
+    }
+  }
+}
+function lock() {
+  const blocks = cells(active.matrix);
+  if (blocks.some(({y}) => active.y+y < 0)) {
+    active = null;
+    setMode("over");
+    return;
+  }
+  for (const {x,y,type} of blocks) board[active.y+y][active.x+x] = type;
+  board = board.filter(line => !line.every(Boolean));
+  const cleared = HEIGHT - board.length;
+  score += [0,100,300,500,800][cleared]*level;
+  lines += cleared;
+  level = 1 + Math.floor(lines/10);
+  board.unshift(...Array.from({length:cleared},row));
+  elapsed = 0;
+  spawn();
+}
+function landing() {
+  let y = active.y;
+  while (fits(active.matrix,active.x,y+1)) y++;
+  return y;
+}
+function action(name) {
+  if (name === "pause" && (mode === "playing" || mode === "paused")) {
+    resetTilt();
+    setMode(mode === "playing" ? "paused" : "playing");
+  } else if (mode === "playing") {
+    switch (name) {
+      case "left": move(-1,0); break;
+      case "right": move(1,0); break;
+      case "rotate": rotate(1); break;
+      case "reverse": rotate(-1); break;
+      case "down":
+        if (move(0,1)) score++;
+        else lock();
+        elapsed = 0;
+        break;
+      case "drop": {
+        const y = landing();
+        score += (y-active.y)*2;
+        active.y = y;
+        lock();
+        break;
+      }
+    }
+  }
+  render();
+}
+function tile(context,x,y,size,type,ghost=false) {
+  context.fillStyle = colors[type];
+  if (ghost) {
+    context.globalAlpha = .4;
+    context.strokeStyle = colors[type];
+    context.lineWidth = 2;
+    context.strokeRect(x+3,y+3,size-6,size-6);
+    context.globalAlpha = 1;
+    return;
+  }
+  context.fillRect(x+1,y+1,size-2,size-2);
+  context.fillStyle = "#ffffff55";
+  context.fillRect(x+3,y+3,size-6,3);
+  context.fillStyle = "#00000030";
+  context.fillRect(x+3,y+size-5,size-6,3);
+}
+function render() {
+  ctx.fillStyle = "#102c2c";
+  ctx.fillRect(0,0,360,540);
+  for (let y=0;y<HEIGHT;y++) for (let x=0;x<WIDTH;x++) {
+    const type = board[y][x];
+    if (type) tile(ctx,x*TILE,y*TILE,TILE,type);
+    else {
+      ctx.fillStyle = "#183635";
+      ctx.fillRect(x*TILE+1,y*TILE+1,TILE-2,TILE-2);
+    }
+  }
+  if (active) {
+    const yEnd = landing();
+    for (const {x,y,type} of cells(active.matrix)) {
+      tile(ctx,(active.x+x)*TILE,(yEnd+y)*TILE,TILE,type,true);
+      tile(ctx,(active.x+x)*TILE,(active.y+y)*TILE,TILE,type);
+    }
+  }
+
+}
+const keys = {ArrowLeft:"left",ArrowRight:"right",ArrowDown:"down",ArrowUp:"rotate",KeyZ:"reverse",Space:"drop",KeyP:"pause",Escape:"pause",KeyH:"help"};
+document.addEventListener("keydown",event => {
+  if (quiz.open) return;
+  const name = keys[event.code];
+  if (!name || (event.code === "Space" && event.target instanceof HTMLButtonElement)) return;
+  event.preventDefault();
+  if (event.repeat && ["drop","pause","rotate","reverse"].includes(name)) return;
+  if (name === "help") {
+    if (!event.repeat) openQuiz();
+  } else action(name);
+});
+function randomInteger(min, max) {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+function makeQuestion() {
+  const tenThousands = randomInteger(2, 9);
+  const hundreds = randomInteger(1, 9);
+  const multiplierDigit = randomInteger(1, 9);
+  const multiplicand = tenThousands * 10000 + hundreds * 100;
+  const multiplier = multiplierDigit * 100;
+  const product = multiplicand * multiplier;
+  const reduced = multiplicand / 100;
+  const place = randomInteger(0, 2);
+  const places = [
+    ["被乘數的萬位數字代表多少？", tenThousands * 10000],
+    ["被乘數的百位數字代表多少？", hundreds * 100],
+    ["乘數的百位數字代表多少？", multiplier]
+  ];
+  const variants = [
+    {type:"位值概念", prompt:places[place][0], answer:places[place][1], hint:"想一想這個數字所在的位置。"},
+    {type:"乘法策略", prompt:"把被乘數拆開計算，最後的乘積是多少？", answer:product,
+      hint:"先算 " + tenThousands * 10000 + " × " + multiplier + " 和 " + hundreds * 100 + " × " + multiplier + "，再把兩個乘積相加。"},
+    {type:"末尾補 0", prompt:"利用末尾補 0 的方法，最後的乘積是多少？", answer:product,
+      hint:"先算 " + reduced + " × " + multiplierDigit + "，再想一想要在結果末尾補幾個 0。"}
+  ];
+  return {multiplicand, multiplier, ...variants[randomInteger(0, variants.length - 1)]};
+}
+function openQuiz() {
+  if (mode !== "playing" || rescueQueued || quiz.open) return;
+  const question = makeQuestion();
+  quizAnswer = question.answer;
+  get("quiz-title").textContent = "求救 · " + question.type;
+  get("problem").textContent = question.multiplicand + " × " + question.multiplier;
+  get("question").textContent = question.prompt;
+  get("hint").textContent = question.hint;
+  get("answer").value = "";
+  get("feedback").textContent = "";
+  quiz.showModal();
+  get("answer").focus();
+  render();
+}
+get("quiz-form").onsubmit = event => {
+  event.preventDefault();
+  const answer = get("answer").value.trim().normalize("NFKC");
+  if (!/^[0-9]+$/.test(answer) || Number(answer) !== quizAnswer) {
+    get("feedback").textContent = "答案有誤，請再試一次。";
+    get("answer").select();
+    return;
+  }
+  rescueQueued = true;
+  quiz.close();
+  render();
+};
+get("cancel-quiz").onclick = () => quiz.close();
+quiz.addEventListener("close", render);
+let tiltBaseline, tiltAngle, tiltDelta = 0, nextTiltMove = 0;
+let motionAttached = false, motionPending = false;
+function updateTilt(event) {
+  if (!Number.isFinite(event.gamma) || !Number.isFinite(event.beta)) return;
+  const angle = screen.orientation?.angle ?? window.orientation ?? 0;
+  const radians = Math.PI / 180;
+  const rotation = angle * radians;
+  const side = Math.sin(event.gamma * radians) * Math.cos(event.beta * radians);
+  const top = -Math.sin(event.beta * radians);
+  const reading = side * Math.cos(rotation) + top * Math.sin(rotation);
+  if (tiltBaseline === undefined || tiltAngle !== angle || mode !== "playing") {
+    tiltAngle = angle;
+    tiltBaseline = reading;
+  }
+  tiltDelta = reading - tiltBaseline;
+}
+async function enableTilt() {
+  const orientation = window.DeviceOrientationEvent;
+  if (!orientation || motionAttached || motionPending) return;
+  motionPending = true;
+  try {
+    if (typeof orientation.requestPermission === "function" &&
+        await orientation.requestPermission() !== "granted") return;
+    window.addEventListener("deviceorientation", updateTilt);
+    motionAttached = true;
+  } catch {
+    // Horizontal swipes remain available when the browser restricts sensors.
+  } finally {
+    motionPending = false;
+  }
+}
+function resetTilt() {
+  tiltBaseline = undefined;
+  tiltDelta = 0;
+}
+let gesture, lastTap;
+function clearGesture() {
+  if (gesture) clearTimeout(gesture.timer);
+  gesture = undefined;
+}
+surface.addEventListener("pointerdown", event => {
+  if (!event.isPrimary || event.button !== 0 || mode !== "playing" || quiz.open) return;
+  clearGesture();
+  surface.setPointerCapture(event.pointerId);
+  gesture = {id:event.pointerId, x:event.clientX, y:event.clientY, anchor:event.clientX};
+  gesture.timer = setTimeout(() => {
+    if (!gesture || gesture.dragged) return;
+    clearGesture();
+    lastTap = undefined;
+    openQuiz();
+  }, 600);
+});
+surface.addEventListener("pointermove", event => {
+  if (!gesture || gesture.id !== event.pointerId) return;
+  const step = Math.max(15, surface.clientWidth / WIDTH);
+  if (Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 10) {
+    gesture.dragged = true;
+    clearTimeout(gesture.timer);
+    lastTap = undefined;
+  }
+  const shift = Math.trunc((event.clientX - gesture.anchor) / step);
+  if (gesture.dragged && shift) {
+    for (let i = 0; i < Math.abs(shift); i++) action(shift < 0 ? "left" : "right");
+    gesture.anchor += shift * step;
+  }
+});
+surface.addEventListener("pointerup", event => {
+  if (!gesture || gesture.id !== event.pointerId) return;
+  const dragged = gesture.dragged;
+  clearGesture();
+  if (dragged) return;
+  const now = performance.now();
+  if (lastTap && now - lastTap.time <= 330 &&
+      Math.hypot(event.clientX - lastTap.x, event.clientY - lastTap.y) <= 45) {
+    action("rotate");
+    lastTap = undefined;
+  } else lastTap = {time:now, x:event.clientX, y:event.clientY};
+});
+surface.addEventListener("pointercancel", clearGesture);
+surface.addEventListener("contextmenu", event => event.preventDefault());
+get("play").onclick = () => {
+  enableTilt();
+  resetTilt();
+  if (mode === "paused") action("pause");
+  else start();
+  surface.focus({preventScroll:true});
+};
+quiz.addEventListener("close", resetTilt);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && mode === "playing") action("pause");
+});
+function frame(time) {
+  const delta = Math.min(time - (previous ?? time),100);
+  previous = time;
+  if (mode === "playing" && !quiz.open) {
+    if (!gesture && Math.abs(tiltDelta) >= .12 && time >= nextTiltMove) {
+      action(tiltDelta < 0 ? "left" : "right");
+      nextTiltMove = time + (Math.abs(tiltDelta) > .27 ? 90 : 170);
+    }
+    elapsed += delta;
+    if (elapsed >= Math.max(95,800 * .82**(level-1))) {
+      elapsed = 0;
+      if (!move(0,1)) lock();
+      render();
+    }
+  }
+  requestAnimationFrame(frame);
+}
+render();
+requestAnimationFrame(frame);
+</script>
+</html>
