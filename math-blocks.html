@@ -8,7 +8,11 @@
 *{box-sizing:border-box}
 body{margin:0;background:#102c2c;color:#fff6dd;font-family:system-ui,sans-serif}
 main{height:100vh;height:100dvh;display:grid;place-items:center;overflow:hidden}
-.well{position:relative;width:min(100vw,62.5vh);width:min(100vw,62.5dvh);aspect-ratio:5/8}
+.game{width:min(100vw,calc((100vh - 60px) * .625));width:min(100vw,calc((100dvh - 60px) * .625))}
+.well{position:relative;aspect-ratio:5/8}
+.rescue-area{height:60px;display:flex;align-items:center;justify-content:flex-end;padding:0 8px}
+#rescue{min-height:44px;background:#ffc477;color:#243e34;border-color:transparent}
+#rescue:disabled{background:#e0d2ac;color:#485044;cursor:default}
 canvas{display:block;width:100%;height:100%;touch-action:none;user-select:none;-webkit-touch-callout:none}
 .overlay{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;text-align:center;gap:15px;background:#091e1de8;padding:20px}
 .overlay[hidden]{display:none}.overlay strong{font-size:clamp(22px,5vw,38px)}.overlay p{margin:0;line-height:1.6}
@@ -21,10 +25,13 @@ dialog input{width:100%;padding:9px;font:inherit;margin:8px 0 0}#feedback{min-he
 #question,#hint{line-height:1.55}.actions{display:flex;flex-wrap:wrap;gap:8px}
 </style>
 <main>
+<div class="game">
 <section class="well" aria-label="遊戲區">
-<canvas id="board" width="300" height="480" tabindex="0" aria-label="10 欄、16 列棋盤。單指雙點旋轉，左右傾斜或滑動移動，長按加速下落，雙指點一下求救。也可使用方向鍵，按 H 求救。"></canvas>
-<div class="overlay" id="overlay"><strong id="status" role="status">math Blocks</strong><p id="guide">雙點旋轉 · 長按加速下落<br>左右傾斜或滑動移動 · 雙指點一下求救</p><button class="accent" id="play">開始遊戲</button></div>
+<canvas id="board" width="300" height="480" tabindex="0" aria-label="10 欄、16 列棋盤。單指雙點旋轉，左右傾斜或滑動移動，長按加速下落，右下角求救按鈕可開啟數學題。也可使用方向鍵，按 H 求救。"></canvas>
+<div class="overlay" id="overlay"><strong id="status" role="status">math Blocks</strong><p id="guide">雙點旋轉 · 長按加速下落<br>左右傾斜或滑動移動 · 按右下角求救</p><button class="accent" id="play">開始遊戲</button></div>
 </section>
+<div class="rescue-area"><button id="rescue" type="button" aria-haspopup="dialog" disabled>求救</button></div>
+</div>
 </main>
 <dialog id="quiz" aria-labelledby="quiz-title"><form id="quiz-form">
 <h2 id="quiz-title">求救挑戰</h2>
@@ -55,6 +62,7 @@ let active, upcoming, bag, score, lines, level, elapsed, previous;
 let mode = "ready";
 let rescueQueued = false, quizAnswer;
 const quiz = get("quiz");
+const rescueButton = get("rescue");
 
 function drawType() {
   if (!bag.length) {
@@ -192,6 +200,8 @@ function tile(context,x,y,size,type,ghost=false) {
   context.fillRect(x+3,y+size-5,size-6,3);
 }
 function render() {
+  rescueButton.disabled = mode !== "playing" || rescueQueued || quiz.open;
+  rescueButton.textContent = rescueQueued ? "下一塊是直線" : "求救";
   ctx.fillStyle = "#102c2c";
   ctx.fillRect(0,0,WIDTH*TILE,HEIGHT*TILE);
   for (let y=0;y<HEIGHT;y++) for (let x=0;x<WIDTH;x++) {
@@ -276,6 +286,7 @@ get("quiz-form").onsubmit = event => {
   quiz.close();
   render();
 };
+rescueButton.onclick = openQuiz;
 get("cancel-quiz").onclick = () => quiz.close();
 quiz.addEventListener("close", render);
 let tiltBaseline, tiltAngle, tiltDelta = 0, nextTiltMove = 0;
