@@ -3,13 +3,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>math Blocks</title>
-<meta name="description" content="在 10 欄 × 16 列的棋盤上旋轉七種四格方塊，填滿整列得分。">
+<meta name="description" content="在 10 欄 × 12 列的棋盤上旋轉七種四格方塊，填滿整列得分。">
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#102c2c;color:#fff6dd;font-family:system-ui,sans-serif}
 main{height:100vh;height:100dvh;display:grid;place-items:center;overflow:hidden}
-.game{width:min(100vw,calc((100vh - 60px) * .625));width:min(100vw,calc((100dvh - 60px) * .625))}
-.well{position:relative;aspect-ratio:5/8}
+.game{width:min(100vw,calc((100vh - 60px) * 5 / 6));width:min(100vw,calc((100dvh - 60px) * 5 / 6))}
+.well{position:relative;aspect-ratio:5/6}
 .rescue-area{height:60px;display:flex;align-items:center;justify-content:flex-end;padding:0 8px}
 #rescue{min-height:44px;background:#ffc477;color:#243e34;border-color:transparent}
 #rescue:disabled{background:#e0d2ac;color:#485044;cursor:default}
@@ -27,7 +27,7 @@ dialog input{width:100%;padding:9px;font:inherit;margin:8px 0 0}#feedback{min-he
 <main>
 <div class="game">
 <section class="well" aria-label="遊戲區">
-<canvas id="board" width="300" height="480" tabindex="0" aria-label="10 欄、16 列棋盤。單指雙點旋轉，左右傾斜或滑動移動，長按加速下落，右下角求救按鈕可開啟數學題。也可使用方向鍵，按 H 求救。"></canvas>
+<canvas id="board" width="300" height="360" tabindex="0" aria-label="10 欄、12 列棋盤。單指雙點旋轉，左右傾斜或滑動移動，長按加速下落，右下角求救按鈕可開啟數學題。也可使用方向鍵，按 H 求救。"></canvas>
 <div class="overlay" id="overlay"><strong id="status" role="status">math Blocks</strong><p id="guide">雙點旋轉 · 長按加速下落<br>左右傾斜或滑動移動 · 按右下角求救</p><button class="accent" id="play">開始遊戲</button></div>
 </section>
 <div class="rescue-area"><button id="rescue" type="button" aria-haspopup="dialog" disabled>求救</button></div>
@@ -45,7 +45,7 @@ dialog input{width:100%;padding:9px;font:inherit;margin:8px 0 0}#feedback{min-he
 </form></dialog>
 <script>
 "use strict";
-const WIDTH = 10, HEIGHT = 16, TILE = 30;
+const WIDTH = 10, HEIGHT = 12, TILE = 30;
 const shapes = {
   I: ["....","IIII","....","...."], O: ["OO","OO"],
   T: [".T.","TTT","..."], S: [".SS","SS.","..."],
