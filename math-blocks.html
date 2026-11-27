@@ -3,12 +3,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>math Blocks</title>
-<meta name="description" content="在 12 欄 × 18 列的棋盤上旋轉七種四格方塊，填滿整列得分。">
+<meta name="description" content="在 10 欄 × 16 列的棋盤上旋轉七種四格方塊，填滿整列得分。">
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#102c2c;color:#fff6dd;font-family:system-ui,sans-serif}
 main{height:100vh;height:100dvh;display:grid;place-items:center;overflow:hidden}
-.well{position:relative;width:min(100vw,66.6667vh);width:min(100vw,66.6667dvh);aspect-ratio:2/3}
+.well{position:relative;width:min(100vw,62.5vh);width:min(100vw,62.5dvh);aspect-ratio:5/8}
 canvas{display:block;width:100%;height:100%;touch-action:none;user-select:none;-webkit-touch-callout:none}
 .overlay{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;text-align:center;gap:15px;background:#091e1de8;padding:20px}
 .overlay[hidden]{display:none}.overlay strong{font-size:clamp(22px,5vw,38px)}.overlay p{margin:0;line-height:1.6}
@@ -22,8 +22,8 @@ dialog input{width:100%;padding:9px;font:inherit;margin:8px 0 0}#feedback{min-he
 </style>
 <main>
 <section class="well" aria-label="遊戲區">
-<canvas id="board" width="360" height="540" tabindex="0" aria-label="12 欄、18 列棋盤。雙點旋轉，左右傾斜移動，長按求救。也可使用方向鍵，按 H 求救。"></canvas>
-<div class="overlay" id="overlay"><strong id="status" role="status">math Blocks</strong><p id="guide">雙點旋轉 · 左右傾斜移動<br>也可左右滑動 · 長按求救</p><button class="accent" id="play">開始遊戲</button></div>
+<canvas id="board" width="300" height="480" tabindex="0" aria-label="10 欄、16 列棋盤。單指雙點旋轉，左右傾斜或滑動移動，長按加速下落，雙指點一下求救。也可使用方向鍵，按 H 求救。"></canvas>
+<div class="overlay" id="overlay"><strong id="status" role="status">math Blocks</strong><p id="guide">雙點旋轉 · 長按加速下落<br>左右傾斜或滑動移動 · 雙指點一下求救</p><button class="accent" id="play">開始遊戲</button></div>
 </section>
 </main>
 <dialog id="quiz" aria-labelledby="quiz-title"><form id="quiz-form">
@@ -38,7 +38,7 @@ dialog input{width:100%;padding:9px;font:inherit;margin:8px 0 0}#feedback{min-he
 </form></dialog>
 <script>
 "use strict";
-const WIDTH = 12, HEIGHT = 18, TILE = 30;
+const WIDTH = 10, HEIGHT = 16, TILE = 30;
 const shapes = {
   I: ["....","IIII","....","...."], O: ["OO","OO"],
   T: [".T.","TTT","..."], S: [".SS","SS.","..."],
@@ -149,6 +149,8 @@ function landing() {
 }
 function action(name) {
   if (name === "pause" && (mode === "playing" || mode === "paused")) {
+    clearGesture();
+    lastTap = undefined;
     resetTilt();
     setMode(mode === "playing" ? "paused" : "playing");
   } else if (mode === "playing") {
@@ -191,7 +193,7 @@ function tile(context,x,y,size,type,ghost=false) {
 }
 function render() {
   ctx.fillStyle = "#102c2c";
-  ctx.fillRect(0,0,360,540);
+  ctx.fillRect(0,0,WIDTH*TILE,HEIGHT*TILE);
   for (let y=0;y<HEIGHT;y++) for (let x=0;x<WIDTH;x++) {
     const type = board[y][x];
     if (type) tile(ctx,x*TILE,y*TILE,TILE,type);
@@ -248,6 +250,8 @@ function makeQuestion() {
 }
 function openQuiz() {
   if (mode !== "playing" || rescueQueued || quiz.open) return;
+  clearGesture();
+  lastTap = undefined;
   const question = makeQuestion();
   quizAnswer = question.answer;
   get("quiz-title").textContent = "求救 · " + question.type;
@@ -311,27 +315,33 @@ function resetTilt() {
 }
 let gesture, lastTap;
 function clearGesture() {
-  if (gesture) clearTimeout(gesture.timer);
+  if (gesture?.accelerating) elapsed = 0;
   gesture = undefined;
 }
 surface.addEventListener("pointerdown", event => {
-  if (!event.isPrimary || event.button !== 0 || mode !== "playing" || quiz.open) return;
+  if (event.button !== 0 || mode !== "playing" || quiz.open) return;
+  if (!event.isPrimary) {
+    if (event.pointerType === "touch" && gesture?.pointerType === "touch" &&
+        !gesture.dragged && !gesture.accelerating && performance.now() - gesture.started < 300) {
+      clearGesture();
+      lastTap = undefined;
+      openQuiz();
+    }
+    return;
+  }
   clearGesture();
   surface.setPointerCapture(event.pointerId);
-  gesture = {id:event.pointerId, x:event.clientX, y:event.clientY, anchor:event.clientX};
-  gesture.timer = setTimeout(() => {
-    if (!gesture || gesture.dragged) return;
-    clearGesture();
-    lastTap = undefined;
-    openQuiz();
-  }, 600);
+  gesture = {
+    id:event.pointerId, pointerType:event.pointerType, started:performance.now(),
+    x:event.clientX, y:event.clientY, anchor:event.clientX
+  };
 });
 surface.addEventListener("pointermove", event => {
   if (!gesture || gesture.id !== event.pointerId) return;
   const step = Math.max(15, surface.clientWidth / WIDTH);
   if (Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 10) {
     gesture.dragged = true;
-    clearTimeout(gesture.timer);
+
     lastTap = undefined;
   }
   const shift = Math.trunc((event.clientX - gesture.anchor) / step);
@@ -342,7 +352,7 @@ surface.addEventListener("pointermove", event => {
 });
 surface.addEventListener("pointerup", event => {
   if (!gesture || gesture.id !== event.pointerId) return;
-  const dragged = gesture.dragged;
+  const dragged = gesture.dragged || gesture.accelerating || performance.now() - gesture.started >= 300;
   clearGesture();
   if (dragged) return;
   const now = performance.now();
@@ -352,7 +362,14 @@ surface.addEventListener("pointerup", event => {
     lastTap = undefined;
   } else lastTap = {time:now, x:event.clientX, y:event.clientY};
 });
-surface.addEventListener("pointercancel", clearGesture);
+function cancelPointer(event) {
+  if (gesture?.id === event.pointerId) {
+    clearGesture();
+    lastTap = undefined;
+  }
+}
+surface.addEventListener("pointercancel", cancelPointer);
+surface.addEventListener("lostpointercapture", cancelPointer);
 surface.addEventListener("contextmenu", event => event.preventDefault());
 get("play").onclick = () => {
   enableTilt();
@@ -363,18 +380,28 @@ get("play").onclick = () => {
 };
 quiz.addEventListener("close", resetTilt);
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden && mode === "playing") action("pause");
+  if (document.hidden) {
+    clearGesture();
+    lastTap = undefined;
+    if (mode === "playing") action("pause");
+  }
 });
 function frame(time) {
   const delta = Math.min(time - (previous ?? time),100);
   previous = time;
   if (mode === "playing" && !quiz.open) {
-    if (!gesture && Math.abs(tiltDelta) >= .12 && time >= nextTiltMove) {
+    if (gesture && !gesture.dragged && !gesture.accelerating && time - gesture.started >= 300) {
+      gesture.accelerating = true;
+      lastTap = undefined;
+      elapsed = 0;
+    }
+    if ((!gesture || gesture.accelerating) && Math.abs(tiltDelta) >= .12 && time >= nextTiltMove) {
       action(tiltDelta < 0 ? "left" : "right");
       nextTiltMove = time + (Math.abs(tiltDelta) > .27 ? 90 : 170);
     }
     elapsed += delta;
-    if (elapsed >= Math.max(95,800 * .82**(level-1))) {
+    const interval = gesture?.accelerating ? 55 : Math.max(95,800 * .82**(level-1));
+    if (elapsed >= interval) {
       elapsed = 0;
       if (!move(0,1)) lock();
       render();
