@@ -37,7 +37,7 @@ dialog input{width:100%;padding:9px;font:inherit;margin:8px 0 0}#feedback{min-he
 <h2 id="quiz-title">求救挑戰</h2>
 <p>答對即可讓下一塊變成四格直線。</p>
 <p id="problem"></p>
-<label id="question" for="answer"></label>
+<label for="answer">請輸入上方算式的完整乘積</label>
 <p id="hint"></p>
 <input id="answer" type="text" inputmode="numeric" autocomplete="off" aria-describedby="hint" required>
 <p id="feedback" role="status"></p>
@@ -243,20 +243,15 @@ function makeQuestion() {
   const multiplier = multiplierDigit * 100;
   const product = multiplicand * multiplier;
   const reduced = multiplicand / 100;
-  const place = randomInteger(0, 2);
-  const places = [
-    ["被乘數的萬位數字代表多少？", tenThousands * 10000],
-    ["被乘數的百位數字代表多少？", hundreds * 100],
-    ["乘數的百位數字代表多少？", multiplier]
-  ];
   const variants = [
-    {type:"位值概念", prompt:places[place][0], answer:places[place][1], hint:"想一想這個數字所在的位置。"},
-    {type:"乘法策略", prompt:"把被乘數拆開計算，最後的乘積是多少？", answer:product,
+    {type:"位值概念",
+      hint:"把 " + multiplicand + " 看成 " + reduced + " 個百，把 " + multiplier + " 看成 " + multiplierDigit + " 個百。百乘百是萬，先算有幾個萬，再寫成整數。"},
+    {type:"乘法策略", 
       hint:"先算 " + tenThousands * 10000 + " × " + multiplier + " 和 " + hundreds * 100 + " × " + multiplier + "，再把兩個乘積相加。"},
-    {type:"末尾補 0", prompt:"利用末尾補 0 的方法，最後的乘積是多少？", answer:product,
+    {type:"末尾補 0", 
       hint:"先算 " + reduced + " × " + multiplierDigit + "，再想一想要在結果末尾補幾個 0。"}
   ];
-  return {multiplicand, multiplier, ...variants[randomInteger(0, variants.length - 1)]};
+  return {multiplicand, multiplier, answer:product, ...variants[randomInteger(0, variants.length - 1)]};
 }
 function openQuiz() {
   if (mode !== "playing" || rescueQueued || quiz.open) return;
@@ -266,7 +261,6 @@ function openQuiz() {
   quizAnswer = question.answer;
   get("quiz-title").textContent = "求救 · " + question.type;
   get("problem").textContent = question.multiplicand + " × " + question.multiplier;
-  get("question").textContent = question.prompt;
   get("hint").textContent = question.hint;
   get("answer").value = "";
   get("feedback").textContent = "";
@@ -274,11 +268,19 @@ function openQuiz() {
   get("answer").focus();
   render();
 }
+function parseProduct(text) {
+  const value = text.normalize("NFKC").trim();
+  const wholeNumber = /^[0-9]+$/;
+  const groupedNumber = /^(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]{1,3}(?: [0-9]{3})+)$/;
+  if (!wholeNumber.test(value) && !groupedNumber.test(value)) return null;
+  const product = Number(value.replace(/[, ]/g, ""));
+  return Number.isSafeInteger(product) ? product : null;
+}
 get("quiz-form").onsubmit = event => {
   event.preventDefault();
-  const answer = get("answer").value.trim().normalize("NFKC");
-  if (!/^[0-9]+$/.test(answer) || Number(answer) !== quizAnswer) {
-    get("feedback").textContent = "答案有誤，請再試一次。";
+  const answer = parseProduct(get("answer").value);
+  if (answer !== quizAnswer) {
+    get("feedback").textContent = answer === null ? "請輸入整數，例如 24420000 或 24,420,000。" : "乘積不符，請依提示再算一次。";
     get("answer").select();
     return;
   }
